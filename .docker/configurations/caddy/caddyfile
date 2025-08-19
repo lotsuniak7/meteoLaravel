@@ -1,0 +1,9 @@
+{
+	frankenphp
+}
+
+:80 {
+	root * weather/public/
+	encode zstd br gzip
+	php_server
+}

@@ -1,0 +1,62 @@
+{
+    "name": "Weather",
+    "dockerComposeFile": "../.docker/compose.yml",
+    "service": "app",
+    "workspaceFolder": "/app",
+    "shutdownAction": "stopCompose",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.vscode-typescript-next",
+                "bradlc.vscode-tailwindcss",
+                "ms-vscode.vscode-json",
+                "ms-vscode.vscode-php-debug",
+                "christian-kohler.path-intellisense",
+                "PKief.material-icon-theme",
+                "bmewburn.vscode-intelephense-client",
+                "laravel.vscode-laravel",
+                "dotenv.dotenv-vscode",
+                "unifiedjs.vscode-mdx"
+            ],
+            "settings": {
+                "typescript.preferences.quoteStyle": "double",
+                "javascript.preferences.quoteStyle": "double",
+                "editor.formatOnSave": true,
+                "editor.defaultFormatter": "esbenp.prettier-vscode",
+                "[php]": {
+                    "editor.defaultFormatter": "ms-vscode.vscode-intelephense"
+                },
+                "intelephense.files.maxSize": 5000000,
+                "php.validate.executablePath": "/usr/local/bin/php",
+                "tailwindCSS.includeLanguages": {
+                    "typescript": "javascript",
+                    "typescriptreact": "javascript"
+                },
+                "emmet.includeLanguages": {
+                    "javascript": "javascriptreact",
+                    "typescript": "typescriptreact"
+                }
+            }
+        }
+    },
+    "forwardPorts": [8222, 5173, 8225],
+    "portsAttributes": {
+        "8222": {
+            "label": "App",
+            "onAutoForward": "notify"
+        },
+        "5173": {
+            "label": "Vite Dev Server",
+            "onAutoForward": "notify"
+        },
+        "8225": {
+            "label": "Mailpit",
+            "onAutoForward": "notify"
+        }
+    },
+    "postCreateCommand": "composer install && bun i",
+    "remoteUser": "app",
+    "containerEnv": {
+        "SHELL": "/bin/sh"
+    }
+}

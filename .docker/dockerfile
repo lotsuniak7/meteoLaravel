@@ -1,0 +1,35 @@
+ARG BUN_VERSION=1.2.20
+ARG COMPOSER_VERSION=2.8.10
+ARG PHP_VERSION=8.4.11
+ARG FRANKENPHP_VERSION=1.9.0
+
+FROM oven/bun:${BUN_VERSION}-alpine AS bun
+FROM composer:${COMPOSER_VERSION} AS composer
+FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php${PHP_VERSION}-alpine
+
+ENV COMPOSER_HOME=/config/composer
+ENV PATH="/config/composer/vendor/bin:$PATH"
+ENV LOG_CHANNEL=stderr
+
+COPY --chown=app:app --from=bun /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+COPY ./.docker/configurations/caddy/caddyfile /etc/frankenphp/Caddyfile
+COPY ./.docker/configurations/php/dev.ini /usr/local/etc/php/conf.d/app.ini
+
+RUN set -eux; \
+    apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers icu-dev zlib-dev; \
+    apk add --no-cache git make icu-libs; \
+    pecl install -o -f redis xdebug; \
+    docker-php-ext-enable redis; \
+    docker-php-ext-install -j"$(nproc)" pcntl intl; \
+    apk del .build-deps; \
+    addgroup -S app && adduser -S app -G app; \
+    mkdir -p /config/psysh /config/composer; \
+    touch /var/log/xdebug.log; \
+    chown app:app -R /config/psysh /config/composer /var/log/xdebug.log; \
+    ln -sf /usr/local/bin/bun /usr/local/bin/bunx; \
+    ln -sf /usr/local/bin/bun /usr/local/bin/npm
+
+USER app
+
+RUN composer global require laravel/installer

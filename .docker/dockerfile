@@ -17,11 +17,12 @@ COPY ./.docker/configurations/caddy/caddyfile /etc/frankenphp/Caddyfile
 COPY ./.docker/configurations/php/dev.ini /usr/local/etc/php/conf.d/app.ini
 
 RUN set -eux; \
-    apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers icu-dev zlib-dev; \
-    apk add --no-cache git make icu-libs; \
+    apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers icu-dev zlib-dev libzip-dev freetype-dev libjpeg-turbo-dev libpng-dev; \
+    apk add --no-cache git make icu-libs libzip freetype libjpeg-turbo libpng; \
+    docker-php-ext-configure gd --with-freetype --with-jpeg; \
     pecl install -o -f redis xdebug; \
     docker-php-ext-enable redis; \
-    docker-php-ext-install -j"$(nproc)" pcntl intl; \
+    docker-php-ext-install -j"$(nproc)" pcntl intl zip gd; \
     apk del .build-deps; \
     addgroup -S app && adduser -S app -G app; \
     mkdir -p /config/psysh /config/composer; \

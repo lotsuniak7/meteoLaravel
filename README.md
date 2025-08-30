@@ -68,14 +68,20 @@ The Laravel project will be created using the Laravel installer Composer package
 For this application, you will use the raw approach with [Blade](https://laravel.com/docs/12.x/blade) for view rendering, [SQLite](https://sqlite.org) as database and [Pest](https://pestphp.com) as tests framework
 
 ```sh
-laravel new weather --no-authentication --pest --npm --database=sqlite
+composer create-project --prefer-dist laravel/laravel .
+```
+
+Then, update the `.env` file
+
+```sh
+APP_URL="http://localhost:8222"
 ```
 
 Once it’s done, the app should be available at [http://localhost:8222](http://localhost:8222)
 Congratulations 🎉 You can now start build your app!
 
 ### Interact with the app
-Ensure to be in `/app/weather` to launch php / composer commands (*php artisan*, ... ) via `cd weather`
+Your application will be present in `/app` in the container. So every terminal you open in the app container allows you to launch php / composer commands (*php artisan*, ... ) directly.
 
 > The image use Bun as Node / NPM replacement. To make it simple, Bun as been aliased as npm
 

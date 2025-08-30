@@ -3,12 +3,12 @@ name: weather
 services:
   app:
     container_name: app
-    image: donovanbroquin/iut:latest
+    image: weather:latest
     ports:
-      - 8222:80
+      - 8222:8080
       - 5173:5173
     volumes:
-      - ../:/app
+      - ../weather:/app
     restart: unless-stopped
     networks:
       - weather
@@ -22,7 +22,7 @@ services:
 
   mailpit:
     container_name: mailpit
-    image: axllent/mailpit:v1.27.0
+    image: axllent/mailpit:v1.27.7
     ports:
       - 8225:8025 
     restart: unless-stopped

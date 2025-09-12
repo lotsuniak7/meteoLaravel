@@ -32,5 +32,3 @@ RUN set -eux; \
     ln -sf /usr/local/bin/bun /usr/local/bin/npm
 
 USER app
-
-RUN composer global require laravel/installer

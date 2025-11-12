@@ -3,7 +3,7 @@ name: weather
 services:
   app:
     container_name: app
-    image: weather:latest
+    image: donovanbroquin/iut:latest
     ports:
       - 8222:8080
       - 5173:5173

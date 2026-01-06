@@ -7,90 +7,73 @@ use Illuminate\Http\Request;
 
 class WeatherController extends Controller
 {
-    // our main page
     public function index(Request $request, OpenWeatherService $weatherService)
     {
-        // Dijon like default city
-        $cities = $request->session()->get('weather_cities', ['Dijon']);
+        // get the main city from the session or use dijon if its empty
+        $mainCityName = $request->session()->get('weather_main', 'Dijon');
+        // take the list of favorite cities from session if we have any stored
+        $favoriteCityNames = $request->session()->get('weather_favorites', []);
 
-        // here we will store all our weather data
-        $weatherDataList = [];
-        $error = null;
+        // fetch current weather data for the main city from the service
+        $mainCityData = $weatherService->current($mainCityName);
 
-        // POST request
-        // Here we check if is a post
-        if ($request->isMethod('post')) {
-            // It is 'Clear'?
-            if ($request->input('action') === 'clear') {
-                // Reset to default
-                $cities = ['Dijon'];
-                $request->session()->put('weather_cities', $cities); // we put this
+        // checking if we actually got the json back from the api
+        // dd($mainCityData);
 
-                // return to the same page
-                return redirect()->route('dashboard');
-            }
-
-
-            // Message if we not put a city to the input
-            $newCity = $request->input('city');
-            if (empty($newCity)) {
-                $error = 'Please enter a city';
-            } else {
-                $checkWeather = $weatherService->current($newCity);
-
-                // If result does not exist we show an error
-                if (isset($checkWeather['error']) || (isset($checkWeather['cod']) && $checkWeather['cod'] == '404')) {
-                    $error = $checkWeather['error'] ?? 'City not found';
-                } else {
-                    $cityLower = strtolower($newCity);
-
-                    // Romove a city from the list, if city already exist and to move him to the front
-                    $cities = array_filter($cities, function ($city) use ($cityLower) {
-                        return strtolower($city) !== $cityLower;
-                    });
-
-                    // add a city to the begining of list
-                    array_unshift($cities, $newCity);
-                    // Save the new list to the data
-                    $request->session()->put('weather_cities', $cities);
-                }
-            }
+        // check if the api returned an error like a bad key or wrong city name
+        // and reset to dijon if something broke so the site doesnt crash
+        if (isset($mainCityData['error'])) {
+            $mainCityName = 'Dijon';
+            $request->session()->put('weather_main', 'Dijon');
+            $mainCityData = $weatherService->current($mainCityName);
         }
 
-        // Get weather data
-        $weatherDataList = [];
+        // get the hourly forecast
+        $hourly = [];
+        if (isset($mainCityData['coord'])) {
+            // get the rawForecast, thats mean the data unreadable, date - 1661871600, or temp - 296.76
+            $rawForecast = $weatherService->forecast($mainCityData['coord']['lat'], $mainCityData['coord']['lon']);
 
-        // Get data from the cities via loop (foreach)
-        foreach ($cities as $city) {
+            // looking at the forecast json to see the structure of raw data
+            // dd($rawForecast);
+
+            // use function of service to change raw data to normal
+            $extracted = $weatherService->extractHourlyForecast($rawForecast);
+
+            // merge today and tomorrow data
+            $hourly = array_merge($extracted['today'] ?? [], $extracted['tomorrow'] ?? []);
+        }
+
+        // put everything together in one array for the main view
+        $mainWeather = [
+            'name' => $mainCityName,
+            'data' => $mainCityData,
+            'hourly' => $hourly
+        ];
+
+        // all the favorite cities
+        $favoritesData = [];
+        foreach ($favoriteCityNames as $city) {
             $current = $weatherService->current($city);
 
-            // Check if the API call was successful
-            if (isset($current['error'])) {
-                $weatherDataList[] = [
-                    'city' => $city,
-                    'error' => $current['error']
+            // checking if the loop is getting data for this specific city
+            // dd($current);
+
+            // add it to the list if the api call was successful
+            if (!isset($current['error'])) {
+                $favoritesData[] = [
+                    'name' => $city,
+                    'temp' => round($current['main']['temp']),
+                    'icon' => $current['weather'][0]['icon'] ?? null,
+                    'description' => $current['weather'][0]['description'] ?? '',
                 ];
-                continue; // to next city
             }
-
-            // forecast
-            $lat = $current['coord']['lat'];
-            $lon = $current['coord']['lon'];
-            $forecast = $weatherService->forecast($lat, $lon);
-
-            // Add all data to our list
-            $weatherDataList[] = [
-                'city' => $city,
-                'current' => $current,
-                'forecast' => $forecast,
-                'error' => null
-            ];
         }
 
-
+        // send all the weather data to the dashboard view
         return view('dashboard', [
-            'weatherDataList' => $weatherDataList,
-            'error' => $error
+            'mainWeather' => $mainWeather,
+            'favorites' => $favoritesData
         ]);
     }
 }

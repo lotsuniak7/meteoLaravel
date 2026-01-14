@@ -59,7 +59,7 @@ class CityController extends Controller
         ]);
     }
 
-    // SET AS MAIN CITY
+    // set as main city
     public function setMain(Request $request)
     {
         $newMain = $request->input('city');
@@ -71,7 +71,6 @@ class CityController extends Controller
         $currentMain = session('weather_main', 'Dijon');
         $favorites = session('weather_favorites', []);
 
-        // LOGIC:
         // if they clicked a favorite city i want to SWAP them
         // the favorite becomes main and the old main goes into favorites
         if ($source === 'favorite_swap') {
@@ -98,7 +97,7 @@ class CityController extends Controller
         return redirect()->route('dashboard');
     }
 
-    // 4. ADD OR REMOVE FAVORITE
+    // add or remove favorite
     // simple logic to toggle the city in the list
     public function toggleFavorite(Request $request)
     {
@@ -116,6 +115,8 @@ class CityController extends Controller
             // remove the city from the array
             $favorites = array_diff($favorites, [$city]);
         }
+
+        //dd($favorites);
 
         // save back to session and re-index the array keys
         session(['weather_favorites' => array_values($favorites)]);

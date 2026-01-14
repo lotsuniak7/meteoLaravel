@@ -40,11 +40,13 @@ class OpenWeatherService
         });
     }
 
+    //-------------------------1-------------------------
     // get the weather for 5 days
     public function forecast(float $lat, float $lon): array
     {
         $cacheKey = "ow:forecast:{$lat}:{$lon}";
 
+        //-------------------------2-------------------------
         return Cache::remember($cacheKey, 300, function () use ($lat, $lon) {
             $response = Http::retry(2, 100)->get("{$this->base}/data/2.5/forecast", [
                 'lat' => $lat,
@@ -61,6 +63,7 @@ class OpenWeatherService
             return $response->json();
         });
     }
+
 
     // For hourly weather today and tomorrow
     public function extractHourlyForecast(array $forecast): array
@@ -89,6 +92,7 @@ class OpenWeatherService
             // only date
             $date = $dateTime->toDateString();
 
+            //-------------------------4-------------------------
             // don't take the past days
             if ($dateTime->isPast()) {
                 continue;
@@ -105,6 +109,7 @@ class OpenWeatherService
 
         return $result;
     }
+
 
     // daily forecast
     public function extractDailyForecast(array $forecast): array

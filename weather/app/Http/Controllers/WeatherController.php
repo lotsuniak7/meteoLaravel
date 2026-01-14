@@ -31,18 +31,22 @@ class WeatherController extends Controller
         // get the hourly forecast
         $hourly = [];
         if (isset($mainCityData['coord'])) {
-            // get the rawForecast, thats mean the data unreadable, date - 1661871600, or temp - 296.76
+            // get the rawForecast, thats mean the full data all days
             $rawForecast = $weatherService->forecast($mainCityData['coord']['lat'], $mainCityData['coord']['lon']);
 
+            //-------------------------3-------------------------
             // looking at the forecast json to see the structure of raw data
-            // dd($rawForecast);
+            //dd($rawForecast);
 
             // use function of service to change raw data to normal
             $extracted = $weatherService->extractHourlyForecast($rawForecast);
 
             // merge today and tomorrow data
             $hourly = array_merge($extracted['today'] ?? [], $extracted['tomorrow'] ?? []);
+            //-------------------------5-------------------------
+            // dd($hourly);
         }
+
 
         // put everything together in one array for the main view
         $mainWeather = [

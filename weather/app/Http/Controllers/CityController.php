@@ -110,7 +110,12 @@ class CityController extends Controller
     public function toggleFavorite(Request $request, string $city)
     {
         $user = Auth::user();
-        $cityModel = $user->cities()->where('name', $city)->first();
+
+        // If city not saved yet — save it first automatically
+        $cityModel = $user->cities()->firstOrCreate(
+            ['name' => $city],
+            ['is_favorite' => false, 'daily_report' => false]
+        );
 
         if (!$cityModel) {
             return redirect()->back()->with('error', 'City not found in your list.');
@@ -119,13 +124,15 @@ class CityController extends Controller
         if ($cityModel->is_favorite) {
             // Already favorite: unfavorite it
             $cityModel->update(['is_favorite' => false]);
+            $msg = "{$city} removed from favorites.";
         } else {
             // Remove favorite from any other city first (only one allowed)
             $user->cities()->where('is_favorite', true)->update(['is_favorite' => false]);
             $cityModel->update(['is_favorite' => true]);
-
-            return redirect()->back();
+            $msg = "{$city} is now your favorite city.";
         }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     // Toggle daily report subscription

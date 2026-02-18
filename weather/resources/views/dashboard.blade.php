@@ -462,12 +462,10 @@
                             <div class="wx-fav-temp">{{ $fav['temp'] }}°</div>
 
                             <div class="wx-fav-actions">
-                                {{-- Set as main --}}
-                                <form action="{{ route('city.setMain') }}" method="POST" style="flex:1">
-                                    @csrf
-                                    <input type="hidden" name="city" value="{{ $fav['name'] }}">
-                                    <input type="hidden" name="source" value="favorite_swap">
-                                    <button class="wx-fav-btn promote" type="submit" title="Set as main" style="width:100%">
+                                {{-- Set as favorite (main) --}}
+                                <form action="{{ route('city.favorite', $fav['name']) }}" method="POST" style="flex:1">
+                                    @csrf @method('PATCH')
+                                    <button class="wx-fav-btn promote" type="submit" title="Set as favorite" style="width:100%">
                                         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 10l7-7 7 7M12 3v18"/></svg>
                                     </button>
                                 </form>
@@ -478,10 +476,8 @@
                                 </a>
 
                                 {{-- Remove --}}
-                                <form action="{{ route('city.toggleFavorite') }}" method="POST" style="flex:1">
-                                    @csrf
-                                    <input type="hidden" name="city" value="{{ $fav['name'] }}">
-                                    <input type="hidden" name="action" value="remove">
+                                <form action="{{ route('city.remove', $fav['name']) }}" method="POST" style="flex:1">
+                                    @csrf @method('DELETE')
                                     <button class="wx-fav-btn danger" type="submit" title="Remove" style="width:100%">
                                         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>

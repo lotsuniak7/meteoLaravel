@@ -55,7 +55,7 @@
         }
         .city-name {
             font-size: clamp(3rem, 8vw, 6rem);
-            font-weight: 800;
+            font-weight: 600;
             letter-spacing: -3px;
             line-height: 0.95;
             margin: 0 0 10px;

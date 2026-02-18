@@ -2,8 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ForecastExport;
+use App\Models\City;
 use App\Services\OpenWeatherService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CityController extends Controller
 {

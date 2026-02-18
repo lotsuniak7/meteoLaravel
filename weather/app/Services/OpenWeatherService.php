@@ -18,6 +18,24 @@ class OpenWeatherService
         $this->key = config('services.openweather.key');
     }
 
+    // ── Geo: resolve city name → canonical name + coordinates ─────
+    public function geo(string $place, int $limit = 1): array
+    {
+        return Cache::remember("ow:geo:{$place}", 3600, function () use ($place, $limit) {
+            $res = Http::retry(2, 100)->get("{$this->base}/geo/1.0/direct", [
+                'q'     => $place,
+                'limit' => $limit,
+                'appid' => $this->key,
+            ]);
+
+            if ($res->failed() || empty($res->json())) {
+                return ['error' => 'city_not_found'];
+            }
+
+            return $res->json()[0];
+        });
+    }
+
     // weather now for place
     public function current(string $place): array
     {
@@ -62,6 +80,18 @@ class OpenWeatherService
 
             return $response->json();
         });
+    }
+
+    // ── Forecast by city name, resolves via geo first ──────
+    public function forecastByName(string $place): array
+    {
+        $current = $this->current($place);
+
+        if (isset($current['error'])) {
+            return $current;
+        }
+
+        return $this->forecast($current['coord']['lat'], $current['coord']['lon']);
     }
 
 
@@ -151,5 +181,24 @@ class OpenWeatherService
         }
 
         return array_values($daily);
+    }
+
+    // ── flat rows for CSV/Excel export ───
+    public function forecastRows(string $place): array
+    {
+        $raw    = $this->forecastByName($place);
+        $daily  = $this->extractDailyForecast($raw);
+        $rows   = [];
+
+        foreach ($daily as $day) {
+            $rows[] = [
+                'date'        => $day['date'],
+                'temp_min'    => round($day['temp_min'], 1),
+                'temp_max'    => round($day['temp_max'], 1),
+                'description' => $day['description'],
+            ];
+        }
+
+        return $rows;
     }
 }

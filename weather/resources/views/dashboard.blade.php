@@ -245,6 +245,90 @@
             margin-top: 4px;
         }
 
+        /* --- Favorites --- */
+        .wx-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            margin-top: 2.5rem;
+        }
+        .wx-favs-grid {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .wx-fav-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 22px 20px;
+            width: 200px;
+            position: relative;
+            transition: transform 0.2s, border-color 0.2s;
+            animation: fadeUp 0.4s ease both;
+        }
+        .wx-fav-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(126,184,247,0.2);
+        }
+        .wx-fav-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+        .wx-fav-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: capitalize;
+            margin-bottom: 10px;
+        }
+        .wx-fav-temp {
+            font-family: 'Space Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .wx-fav-icon {
+            width: 48px;
+            height: 48px;
+            position: absolute;
+            top: 16px;
+            right: 14px;
+        }
+
+        /* Fav actions — hidden until hover */
+        .wx-fav-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid var(--glass-border);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .wx-fav-card:hover .wx-fav-actions { opacity: 1; }
+        .wx-fav-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 7px;
+            border-radius: 8px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s;
+            font-size: 11px;
+        }
+        .wx-fav-btn:hover { background: var(--glass-hover); color: var(--text-primary); }
+        .wx-fav-btn.danger:hover { color: #f5736a; border-color: rgba(245,115,106,0.3); }
+        .wx-fav-btn.promote:hover { color: var(--accent); border-color: rgba(126,184,247,0.3); }
+
         /* --- Animations --- */
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(16px); }
@@ -257,6 +341,7 @@
         @media (max-width: 640px) {
             .wx-main { padding: 24px 18px; }
             .wx-main-top { gap: 1rem; }
+            .wx-fav-card { width: 160px; }
         }
     </style>
 
@@ -365,46 +450,40 @@
                 @endif
             </div>
 
-            {{-- 3. FAVORITES --}}
+            {{-- FAVORITES --}}
             @if(count($favorites) > 0)
-                <h3 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">Favorites</h3>
-                <div class="flex flex-wrap gap-6">
-                    @foreach($favorites as $fav)
-                        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 relative group w-[240px] hover:shadow-xl transition-shadow">
-                            {{-- Content --}}
-                            <div class="text-center mb-4">
-                                <img src="https://openweathermap.org/img/wn/{{ $fav['icon'] }}@2x.png" class="w-20 h-20 mx-auto mb-3">
-                                <h4 class="font-bold text-xl dark:text-gray-100 mb-2">{{ $fav['name'] }}</h4>
-                                <p class="text-gray-500 dark:text-gray-400 text-3xl font-bold">{{ $fav['temp'] }}°C</p>
-                            </div>
-                            {{-- Actions --}}
-                            <div class="flex justify-center items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                {{-- 1. Set as Main --}}
-                                <form action="{{ route('city.setMain') }}" method="POST">
+                <div class="wx-section-title">Saved cities</div>
+                <div class="wx-favs-grid">
+                    @foreach($favorites as $i => $fav)
+                        <div class="wx-fav-card" style="animation-delay: {{ $i * 0.06 }}s">
+                            <img class="wx-fav-icon" src="https://openweathermap.org/img/wn/{{ $fav['icon'] }}@2x.png" alt="">
+                            <div class="wx-fav-name">{{ $fav['name'] }}</div>
+                            <div class="wx-fav-desc">{{ $fav['description'] }}</div>
+                            <div class="wx-fav-temp">{{ $fav['temp'] }}°</div>
+
+                            <div class="wx-fav-actions">
+                                {{-- Set as main --}}
+                                <form action="{{ route('city.setMain') }}" method="POST" style="flex:1">
                                     @csrf
                                     <input type="hidden" name="city" value="{{ $fav['name'] }}">
                                     <input type="hidden" name="source" value="favorite_swap">
-                                    <button type="submit" class="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition" title="Set as Main">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                                        </svg>
+                                    <button class="wx-fav-btn promote" type="submit" title="Set as main" style="width:100%">
+                                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 10l7-7 7 7M12 3v18"/></svg>
                                     </button>
                                 </form>
-                                {{-- 2. Details --}}
-                                <a href="{{ route('city.show', ['city' => $fav['name']]) }}" class="p-2 bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition" title="Details">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                    </svg>
+
+                                {{-- Details --}}
+                                <a class="wx-fav-btn" href="{{ route('city.show', ['city' => $fav['name']]) }}" title="Details">
+                                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
                                 </a>
-                                {{-- 3. Remove --}}
-                                <form action="{{ route('city.toggleFavorite') }}" method="POST">
+
+                                {{-- Remove --}}
+                                <form action="{{ route('city.toggleFavorite') }}" method="POST" style="flex:1">
                                     @csrf
                                     <input type="hidden" name="city" value="{{ $fav['name'] }}">
                                     <input type="hidden" name="action" value="remove">
-                                    <button type="submit" class="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition" title="Remove">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
-                                        </svg>
+                                    <button class="wx-fav-btn danger" type="submit" title="Remove" style="width:100%">
+                                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
                                 </form>
                             </div>

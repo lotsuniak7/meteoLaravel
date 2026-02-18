@@ -11,9 +11,6 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
     public function edit(Request $request): View
     {
         return view('profile.edit', [
@@ -21,9 +18,6 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $request->user()->fill($request->validated());
@@ -37,9 +31,6 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
-    /**
-     * Delete the user's account.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
@@ -49,12 +40,26 @@ class ProfileController extends Controller
         $user = $request->user();
 
         Auth::logout();
-
         $user->delete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    // API Token generation
+    // Generate a new API token (deletes the previous one — token shown only once)
+    public function generateToken(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        // Delete any previously created tokens so only one can exist at a time
+        $user->tokens()->delete();
+
+        $token = $user->createToken('api-token')->plainTextToken;
+
+        // Flash the plain token to session — it will only be shown on the next page load
+        return Redirect::route('profile.edit')->with('api_token', $token);
     }
 }

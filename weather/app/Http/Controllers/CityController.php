@@ -7,11 +7,22 @@ use Illuminate\Http\Request;
 
 class CityController extends Controller
 {
+    public function __construct(private readonly OpenWeatherService $weather) {}
+
+    // List all cities saved by the user
+    public function index(): View
+    {
+        $cities = Auth::user()->cities()->orderByDesc('is_favorite')->orderBy('name')->get();
+
+        return view('cities.index', compact('cities'));
+    }
+
     // SEARCH LOGIC
     // it takes the city name and redirects the user to the proper detail page url
-    public function search(Request $request)
+    public function search(Request $request): RedirectResponse
     {
-        $city = $request->input('city');
+        //delete spaces
+        $city = trim($request->input('city'));
 
         // if they pressed enter without typing anything
         if (empty($city)) {
@@ -24,7 +35,7 @@ class CityController extends Controller
 
     // DETAILED CITY PAGE
     // shows current weather and daily forecast for a specific city
-    public function show($city, OpenWeatherService $weatherService)
+    public function show($city, OpenWeatherService $weatherService): View|RedirectResponse
     {
         // verify if the city actually exists by asking the api
         $current = $weatherService->current($city);
@@ -37,90 +48,107 @@ class CityController extends Controller
         // fetching the forecast because i need the daily summary for this page
         $dailyForecast = [];
         if (isset($current['coord'])) {
-            $rawForecast = $weatherService->forecast($current['coord']['lat'], $current['coord']['lon']);
-            // using my helper to get simple day-by-day stats
-            $dailyForecast = $weatherService->extractDailyForecast($rawForecast);
+            $raw = $this->weather->forecast($current['coord']['lat'], $current['coord']['lon']);
+            $dailyForecast = $this->weather->extractDailyForecast($raw);
         }
 
-        // i need to know if this city is already the main one or in favorites
-        $mainCity = session('weather_main', 'Dijon');
-        $favorites = session('weather_favorites', []);
-
-        // using strtolower to make sure Paris and paris are treated as the same thing
-        $isMain = (strtolower($city) === strtolower($mainCity));
-        $isFavorite = in_array(strtolower($city), array_map('strtolower', $favorites));
+        $user = Auth::user();
+        $savedCity  = $user->cities()->where('name', $current['name'])->first();
 
         return view('city.show', [
-            'city' => $current['name'],
-            'current' => $current,
-            'daily' => $dailyForecast,
-            'isMain' => $isMain,
-            'isFavorite' => $isFavorite
+            'city'        => $current['name'],
+            'current'     => $current,
+            'daily'       => $dailyForecast,
+            'isSaved'     => $savedCity !== null,
+            'isFavorite'  => $savedCity?->is_favorite ?? false,
+            'dailyReport' => $savedCity?->daily_report ?? false,
         ]);
     }
 
-    // set as main city
-    public function setMain(Request $request)
+    // Add a city to the user's list
+    public function add(Request $request): RedirectResponse
     {
-        $newMain = $request->input('city');
-        // source tells me if they clicked from the detail page or the favorite sidebar
-        $source = $request->input('source');
+        $cityName = $request->input('city');
 
-        if (!$newMain) return redirect()->back();
+        // Validate the city exists via API before saving
+        $geo = $this->weather->geo($cityName);
 
-        $currentMain = session('weather_main', 'Dijon');
-        $favorites = session('weather_favorites', []);
-
-        // if they clicked a favorite city i want to SWAP them
-        // the favorite becomes main and the old main goes into favorites
-        if ($source === 'favorite_swap') {
-            // remove the new main from the favorites list
-            $favorites = array_diff($favorites, [$newMain]);
-
-            // push the old main city into the favorites list so we dont lose it
-            if ($currentMain !== $newMain) {
-                array_push($favorites, $currentMain);
-            }
-        } else {
-            // if they just set it from the search page
-            // i just overwrite the main city and remove it from favorites if it was there
-            $favorites = array_diff($favorites, [$newMain]);
+        if (isset($geo['error'])) {
+            return redirect()->back()->with('error', 'City not found.');
         }
 
-        // save the new state to the session
-        session([
-            'weather_main' => $newMain,
-            // array_unique ensures we dont have duplicates just in case
-            'weather_favorites' => array_unique($favorites)
-        ]);
+        $canonicalName = $geo['name'];
 
-        return redirect()->route('dashboard');
+        try {
+            Auth::user()->cities()->firstOrCreate(
+                ['name' => $canonicalName],
+                ['is_favorite' => false, 'daily_report' => false]
+            );
+        } catch (\Exception) {
+            // Unique constraint: city already exists for this user, that's fine
+        }
+
+        return redirect()->back()->with('success', "{$canonicalName} added to your cities.");
+    }
+
+    // Remove a city from the user's list
+    public function remove(string $city): RedirectResponse
+    {
+        Auth::user()->cities()->where('name', $city)->delete();
+
+        return redirect()->back()->with('success', "{$city} removed.");
     }
 
     // add or remove favorite
     // simple logic to toggle the city in the list
-    public function toggleFavorite(Request $request)
+    public function toggleFavorite(Request $request, string $city)
     {
-        $city = $request->input('city');
-        $action = $request->input('action'); // 'add' or 'remove'
+        $user = Auth::user();
+        $cityModel = $user->cities()->where('name', $city)->first();
 
-        $favorites = session('weather_favorites', []);
-
-        if ($action === 'add') {
-            // only add if its not already there
-            if (!in_array($city, $favorites)) {
-                $favorites[] = $city;
-            }
-        } else {
-            // remove the city from the array
-            $favorites = array_diff($favorites, [$city]);
+        if (!$cityModel) {
+            return redirect()->back()->with('error', 'City not found in your list.');
         }
 
-        //dd($favorites);
+        if ($cityModel->is_favorite) {
+            // Already favorite: unfavorite it
+            $cityModel->update(['is_favorite' => false]);
+        } else {
+            // Remove favorite from any other city first (only one allowed)
+            $user->cities()->where('is_favorite', true)->update(['is_favorite' => false]);
+            $cityModel->update(['is_favorite' => true]);
 
-        // save back to session and re-index the array keys
-        session(['weather_favorites' => array_values($favorites)]);
+            return redirect()->back();
+        }
+    }
+
+    // Toggle daily report subscription
+    public function toggleDailyReport(string $city): RedirectResponse
+    {
+        $cityModel = Auth::user()->cities()->where('name', $city)->first();
+
+        if (!$cityModel) {
+            return redirect()->back()->with('error', 'City not found in your list.');
+        }
+
+        $cityModel->update(['daily_report' => !$cityModel->daily_report]);
 
         return redirect()->back();
+    }
+
+    // Export forecast as XLSX
+    public function exportXlsx(string $city): mixed
+    {
+        $filename = 'forecast_' . strtolower(str_replace(' ', '_', $city)) . '.xlsx';
+
+        return Excel::download(new ForecastExport($city, $this->weather), $filename);
+    }
+
+    // Export forecast as CSV
+    public function exportCsv(string $city): mixed
+    {
+        $filename = 'forecast_' . strtolower(str_replace(' ', '_', $city)) . '.csv';
+
+        return Excel::download(new ForecastExport($city, $this->weather), $filename, \Maatwebsite\Excel\Excel::CSV);
     }
 }

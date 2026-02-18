@@ -9,10 +9,10 @@ class WeatherController extends Controller
 {
     public function index(Request $request, OpenWeatherService $weatherService)
     {
-        // get the main city from the session or use dijon if its empty
-        $mainCityName = $request->session()->get('weather_main', 'Dijon');
-        // take the list of favorite cities from session if we have any stored
-        $favoriteCityNames = $request->session()->get('weather_favorites', []);
+        $user = Auth::user();
+        $cities = $user->cities()->orderByDesc('is_favorite')->orderBy('name')->get();
+        $favorite = $cities->firstWhere('is_favorite', true);
+        $mainCityName = $favorite?->name ?? $cities->first()?->name ?? 'Dijon';
 
         // fetch current weather data for the main city from the service
         $mainCityData = $weatherService->current($mainCityName);
@@ -24,7 +24,6 @@ class WeatherController extends Controller
         // and reset to dijon if something broke so the site doesnt crash
         if (isset($mainCityData['error'])) {
             $mainCityName = 'Dijon';
-            $request->session()->put('weather_main', 'Dijon');
             $mainCityData = $weatherService->current($mainCityName);
         }
 
@@ -55,21 +54,27 @@ class WeatherController extends Controller
             'hourly' => $hourly
         ];
 
-        // all the favorite cities
-        $favoritesData = [];
-        foreach ($favoriteCityNames as $city) {
-            $current = $weatherService->current($city);
+        // Fetch brief weather summary for every other saved city
+        $savedCitiesData = [];
+        foreach ($cities as $city) {
+            if (strtolower($city->name) === strtolower($mainCityName)) {
+                continue;
+            }
+
+            $current = $weatherService->current($city->name);
 
             // checking if the loop is getting data for this specific city
             // dd($current);
 
             // add it to the list if the api call was successful
             if (!isset($current['error'])) {
-                $favoritesData[] = [
-                    'name' => $city,
+                $savedCitiesData[] = [
+                    'name' => $city->name,
                     'temp' => round($current['main']['temp']),
                     'icon' => $current['weather'][0]['icon'] ?? null,
                     'description' => $current['weather'][0]['description'] ?? '',
+                    'is_favorite' => $city->is_favorite,
+                    'daily_report'=> $city->daily_report,
                 ];
             }
         }
@@ -77,7 +82,7 @@ class WeatherController extends Controller
         // send all the weather data to the dashboard view
         return view('dashboard', [
             'mainWeather' => $mainWeather,
-            'favorites' => $favoritesData
+            'favorites' => $savedCitiesData
         ]);
     }
 }

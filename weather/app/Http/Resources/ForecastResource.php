@@ -5,6 +5,11 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * API Resource for formatting weather forecast data
+ * This class transforms the raw forecast array retrieved from the OpenWeatherService
+ * into a standardized JSON structure for our API consumers
+ */
 class ForecastResource extends JsonResource
 {
     public function toArray(Request $request): array

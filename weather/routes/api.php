@@ -11,7 +11,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/forecast', [WeatherApiController::class, 'forecast']);
 
     // User city management
-    // IMPORTANT: /favorite/* must come BEFORE /{place} to avoid route collision
+    // /favorite/* must come BEFORE /{place} to avoid route collision
     Route::prefix('user/places')->group(function () {
         Route::get('/favorite/weather', [UserPlacesController::class, 'favoriteWeather']);
         Route::get('/favorite/forecast', [UserPlacesController::class, 'favoriteForecast']);

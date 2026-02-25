@@ -8,6 +8,10 @@ use App\Services\OpenWeatherService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
+/**
+ * Artisan command to send daily weather forecasts to users.
+ * This handles the scheduled task requirement of the project.
+ */
 class SendDailyForecasts extends Command
 {
     protected $signature = 'weather:send-forecasts';

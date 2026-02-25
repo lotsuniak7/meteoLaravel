@@ -5,6 +5,10 @@ namespace App\Console\Commands;
 use App\Services\OpenWeatherService;
 use Illuminate\Console\Command;
 
+/**
+ * Artisan command to display the current weather for a specific city directly in the terminal.
+ * This fulfills the requirement to have a CLI tool for fetching weather.
+ */
 class ShowCityWeather extends Command
 {
     protected $signature   = 'weather:current {city : The city name to look up}';
@@ -15,6 +19,7 @@ class ShowCityWeather extends Command
         $city = $this->argument('city');
         $data = $weather->current($city);
 
+        // if the API returns an error we display an error message
         if (isset($data['error'])) {
             $this->error("City not found: {$city}");
             return self::FAILURE;
